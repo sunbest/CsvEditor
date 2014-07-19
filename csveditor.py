@@ -47,12 +47,21 @@ class SimpleGrid(gridlib.Grid):
 
 		self.firsts = {}
 
+		# 何か変更点があるかどうか
+		self.bChange = False
+
+	def isChange(self):
+		return self.bChange
+
 	def openFile(self, filename):
+		self.bChange = False
 		self.firsts = {}
 		for j in range(self.HEIGHT):
 			for i in range(self.WIDTH):
 				# セルの色を元に戻す
 				self.SetCellBackgroundColour(j, i, wx.WHITE)
+				# 値も消す
+				self.SetCellValue(j, i, "")
 
 		j = 0
 		for line in codecs.open(filename, "r", "utf-8"):
@@ -71,9 +80,24 @@ class SimpleGrid(gridlib.Grid):
 
 	def save(self):
 		if self.filename == None:
-			self.SetStatusText("Error: Please open file.")
-			return
+			dirName = ''
+			# ファイル選択ダイアログの表示
+			dialog = wx.FileDialog(self, "Choose a save file", dirName, "", "*.csv", wx.OPEN)
 
+			# OKボタンが押されるまで表示
+			result = dialog.ShowModal()
+			dialog.Destroy()
+			if result == wx.ID_OK:
+				# ファイルを開いて保存する
+				fileName = dialog.GetFilename()
+				dirName = dialog.GetDirectory()
+				self.filename = dirName + "/" + fileName
+			else:
+				self.SetStatusText("Error: Please open file.")
+				return
+
+
+		self.bChange = False
 		self.firsts = {}
 		out = ""
 		bEnd = False
@@ -101,6 +125,7 @@ class SimpleGrid(gridlib.Grid):
 		fOut.write(out)
 		fOut.close
 		self.SetStatusText("Save as '%s'."%self.filename)
+		print("Save as '%s'."%self.filename)
 
 
 	def OnCellLeftClick(self, evt):
@@ -173,6 +198,8 @@ class SimpleGrid(gridlib.Grid):
 		color = wx.WHITE
 		if self.Cells(evt) != self.Firsts(evt):
 			color = wx.Colour(255, 211, 255)
+			self.bChange = True # 何か変更があった
+
 		self.SetCellBackgroundColour(evt.GetRow(), evt.GetCol(), color)
 	def OnEditorShown(self, evt):
 		# セルのエディット開始
@@ -196,6 +223,12 @@ class SimpleGrid(gridlib.Grid):
 	def SetStatusText(self, msg):
 		self.frame.statusbar.SetStatusText("[%s] %s"%(self.filename, msg))
 
+	def checkSave(self):
+		# セーブ終了確認
+		if self.isChange():
+			result = wx.MessageBox("Are you sure you want to save change?", "Confirm Save", wx.OK | wx.CANCEL | wx.ICON_QUESTION)
+			if result == wx.OK:
+				self.save()
 
 class AppFrame(wx.Frame):
 	def __init__(self, parent, log):
@@ -210,9 +243,11 @@ class AppFrame(wx.Frame):
 		self.toolbar = toolbar
 		# 保存アイコン追加
 		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./icons/save.gif"))
+		toolbar.AddLabelTool(wx.ID_OPEN, "Open", wx.Bitmap("./icons/open.gif"))
 		toolbar.Realize()
 
 		self.Bind(wx.EVT_TOOL, self.OnSave, id=wx.ID_SAVE)
+		self.Bind(wx.EVT_TOOL, self.OnOpen, id=wx.ID_OPEN)
 
 		# グリッド生成
 		grid = SimpleGrid(panel, self)
@@ -220,12 +255,17 @@ class AppFrame(wx.Frame):
 
 		# メニューバー生成
 		menu_file = wx.Menu()
-		menu_save = wx.MenuItem(menu_file, 1, u"&Save\tCtrl+S")
+		menu_open = wx.MenuItem(menu_file, 1, u"&Open\tCtrl+O")
+		menu_save = wx.MenuItem(menu_file, 2, u"&Save\tCtrl+S")
+		menu_file.AppendItem(menu_open)
 		menu_file.AppendItem(menu_save)
 		menu_file.AppendSeparator()
-		menu_file.Append(2, "&Quit", "Quit CsvEditor")
+		menu_exit = wx.MenuItem(menu_file, 3, "&Quit", "Quit CsvEditor")
+		menu_file.AppendItem(menu_exit)
 
+		self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
 		self.Bind(wx.EVT_MENU, self.OnSave, menu_save)
+		self.Bind(wx.EVT_MENU, self.OnExit, menu_exit)
 
 		menu_edit = wx.Menu()
 		menu_edit.Append(3, u"Copy")
@@ -248,8 +288,26 @@ class AppFrame(wx.Frame):
 		bs.Add(statusbar)
 		panel.SetSizer(bs)
 
+		self.Bind(wx.EVT_CLOSE, self.OnExit)
+
 	def OnExit(self, evt):
-		self.Close()
+		self.grid.checkSave()
+		# self.Close()
+		wx.Exit()
+
+	def OnOpen(self, evt):
+		self.grid.checkSave()
+
+		dirName = ''
+		# ファイル選択ダイアログの表示
+		dialog = wx.FileDialog(self, "Choose a file", dirName, "", "*.csv", wx.OPEN)
+
+		# OKボタンが押されるまで表示
+		if dialog.ShowModal() == wx.ID_OK:
+			fileName = dialog.GetFilename()
+			dirName = dialog.GetDirectory()
+			self.grid.openFile(dirName + "/" + fileName)
+		dialog.Destroy()
 
 	def OnSave(self, evt):
 		self.grid.save()
