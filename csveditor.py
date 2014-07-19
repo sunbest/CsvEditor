@@ -45,7 +45,7 @@ class SimpleGrid(gridlib.Grid):
 
 		self.log = sys.stdout
 
-		self.cells = {}
+		self.firsts = {}
 
 	def openFile(self, filename):
 		self.firsts = {}
@@ -149,6 +149,10 @@ class SimpleGrid(gridlib.Grid):
 			print("IsCellEditControlEnabled")
 			self.HideCellEditControl()
 			self.DisableCellEditControl()
+
+		col = chr(65+evt.GetCol())
+		msg = "%s:%d %s"%(col, evt.GetRow(), self.Cells(evt))
+		self.SetStatusText(msg)
 
 		evt.Skip()
 
@@ -259,6 +263,6 @@ if __name__ == "__main__":
 	frame.Show()
 
 	# テスト用コード
-	frame.grid.openFile("test.csv")
+	# frame.grid.openFile("test.csv")
 
 	application.MainLoop()
