@@ -139,17 +139,20 @@ class AppFrame(wx.Frame):
 		panel.SetSizer(bs)
 
 		menu_file = wx.Menu()
-		menu_file.Append(1, u"保存")
+		menu_save = wx.MenuItem(menu_file, 1, u"&Save\tCtrl+S")
+		menu_file.AppendItem(menu_save)
 		menu_file.AppendSeparator()
-		menu_file.Append(2, u"終了")
+		menu_file.Append(2, "&Quit", "Quit CsvEditor")
+
+		self.Bind(wx.EVT_MENU, self.OnSave, menu_save)
 
 		menu_edit = wx.Menu()
-		menu_edit.Append(3, u"コピー")
-		menu_edit.Append(4, u"貼り付け")
+		menu_edit.Append(3, u"Copy")
+		menu_edit.Append(4, u"Paste")
 
 		menu_bar = wx.MenuBar()
-		menu_bar.Append(menu_file, u"ファイル")
-		menu_bar.Append(menu_edit, u"編集")
+		menu_bar.Append(menu_file, u"File")
+		menu_bar.Append(menu_edit, u"Edit")
 
 		self.SetMenuBar(menu_bar)
 
