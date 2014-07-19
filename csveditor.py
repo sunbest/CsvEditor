@@ -17,7 +17,7 @@ class GridFileDropTarget(wx.FileDropTarget):
 
 class SimpleGrid(gridlib.Grid):
 	WIDTH = 25
-	HEIGHT = 25
+	HEIGHT = 100
 	def __init__(self, parent, frame):
 		gridlib.Grid.__init__(self, parent, -1)
 		self.parent = parent
@@ -32,6 +32,8 @@ class SimpleGrid(gridlib.Grid):
 		self.CreateGrid(self.HEIGHT, self.WIDTH)
 
 		# バインド
+		self.Bind(wx.EVT_IDLE, self.OnIdle)
+
 		self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnCellLeftClick)
 
 		self.Bind(gridlib.EVT_GRID_CELL_CHANGE, self.OnCellChange)
@@ -72,7 +74,7 @@ class SimpleGrid(gridlib.Grid):
 			for v in data:
 				self.SetCellValue(j, i, v)
 				# 初期値を保存しておく
-				self.firsts[i+j*self.HEIGHT] = v
+				self.firsts[i+j*self.WIDTH] = v
 				i += 1
 			j += 1
 		self.filename = filename
@@ -104,7 +106,7 @@ class SimpleGrid(gridlib.Grid):
 		for j in range(self.HEIGHT):
 			for i in range(self.WIDTH):
 				v = self.GetCellValue(j, i)
-				self.firsts[i + j*self.HEIGHT] = v
+				self.firsts[i + j*self.WIDTH] = v
 				# セルの色を元に戻す
 				self.SetCellBackgroundColour(j, i, wx.WHITE)
 				if v == "":
@@ -151,6 +153,7 @@ class SimpleGrid(gridlib.Grid):
 	def OnCellChange(self, evt):
 		self.log.write("OnCellChange: (%d,%d) %s\n" %
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		self.checkDiff(evt)
 
 	def OnIdle(self, evt):
 		if self.moveTo != None:
@@ -187,7 +190,7 @@ class SimpleGrid(gridlib.Grid):
 
 	def Firsts(self, evt):
 		# 初期値を取得する
-		idx = evt.GetRow() * self.HEIGHT + evt.GetCol()
+		idx = evt.GetRow() * self.WIDTH+ evt.GetCol()
 		if idx in self.firsts:
 			return self.firsts[idx]
 		else:
