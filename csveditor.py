@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import sys
 import wx
 import wx.grid as gridlib
 import codecs
@@ -11,24 +12,29 @@ class GridFileDropTarget(wx.FileDropTarget):
 		self.grid = grid
 
 	def OnDropFiles(self, x, y, filenames):
-		# 指定のファイルを開く
+		# ドロップされたファイルを開く
 		self.grid.openFile(filenames[0])
 
 class SimpleGrid(gridlib.Grid):
-	def __init__(self, parent, log):
+	def __init__(self, parent, frame):
 		gridlib.Grid.__init__(self, parent, -1)
-		self.log = log
+		self.parent = parent
+		self.frame = frame
 		self.moveTo = None
 
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
 		self.SetDropTarget(GridFileDropTarget(self))
 
+		# ひとまず25x25固定とする
 		self.CreateGrid(25, 25)
-		# self.SetColSize(3, 200)
-		# self.SetRowSize(4, 45)
+
+		# バインド
+		self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnCellLeftClick)
 
 		self.filename = None
+
+		self.log = sys.stdout
 
 	def openFile(self, filename):
 		j = 0
@@ -42,10 +48,11 @@ class SimpleGrid(gridlib.Grid):
 				i += 1
 			j += 1
 		self.filename = filename
+		self.SetStatusText("Open file '%s'."%filename)
 
 	def save(self):
 		if self.filename == None:
-			print "Error: Please open file."
+			self.SetStatusText("Error: Please open file.")
 			return
 
 		out = ""
@@ -70,7 +77,7 @@ class SimpleGrid(gridlib.Grid):
 		fOut = codecs.open(self.filename, "w", "utf-8")
 		fOut.write(out)
 		fOut.close
-		print "Save done '%s'"%self.filename
+		self.SetStatusText("Save as '%s'."%self.filename)
 
 
 	def OnCellLeftClick(self, evt):
@@ -107,7 +114,7 @@ class SimpleGrid(gridlib.Grid):
 			# 非選択状態
 			msg = 'Deselected'
 
-		self.log.write("OnSelectCell: (%d,%d) %s\n" %
+		print("OnSelectCell: (%d,%d) %s\n" %
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
 
 		if self.IsCellEditControlEnabled():
@@ -116,28 +123,32 @@ class SimpleGrid(gridlib.Grid):
 
 		evt.Skip()
 
+	def SetStatusText(self, msg):
+		self.frame.statusbar.SetStatusText(msg)
+
+
 class AppFrame(wx.Frame):
 	def __init__(self, parent, log):
 		wx.Frame.__init__(self, parent, -1, "CSV Editor", size=(640, 480))
 
-		# panel = wx.Panel(self, wx.ID_ANY)
+		# パネル生成
 		panel = wx.Panel(self, -1, style=0)
 		panel.SetBackgroundColour("#CFCFCF")
 
+		# ツールバー生成
 		toolbar = wx.ToolBar(panel)
 		self.toolbar = toolbar
+		# 保存アイコン追加
 		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./icons/save.gif"))
 		toolbar.Realize()
 
 		self.Bind(wx.EVT_TOOL, self.OnSave, id=wx.ID_SAVE)
 
-		grid = SimpleGrid(panel, log)
+		# グリッド生成
+		grid = SimpleGrid(panel, self)
 		self.grid = grid
-		bs = wx.BoxSizer(wx.VERTICAL)
-		bs.Add(toolbar)
-		bs.Add(grid, 1, wx.GROW|wx.ALL, 5)
-		panel.SetSizer(bs)
 
+		# メニューバー生成
 		menu_file = wx.Menu()
 		menu_save = wx.MenuItem(menu_file, 1, u"&Save\tCtrl+S")
 		menu_file.AppendItem(menu_save)
@@ -156,12 +167,22 @@ class AppFrame(wx.Frame):
 
 		self.SetMenuBar(menu_bar)
 
+		# ステータスバー生成
+		statusbar = wx.StatusBar(panel)
+		self.statusbar = statusbar
+		statusbar.SetStatusText("Please open csv file.")
+
+		bs = wx.BoxSizer(wx.VERTICAL)
+		bs.Add(toolbar)
+		bs.Add(grid, 1, wx.GROW|wx.ALL, 5)
+		bs.Add(statusbar)
+		panel.SetSizer(bs)
+
 	def OnExit(self, evt):
 		self.Close()
 
 	def OnSave(self, evt):
 		self.grid.save()
-		print "Save done."
 
 if __name__ == "__main__":
 	import sys
