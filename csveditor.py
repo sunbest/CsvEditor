@@ -124,14 +124,17 @@ class AppFrame(wx.Frame):
 		panel = wx.Panel(self, -1, style=0)
 		panel.SetBackgroundColour("#CFCFCF")
 
+		toolbar = wx.ToolBar(panel)
+		self.toolbar = toolbar
+		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./icons/save.gif"))
+		toolbar.Realize()
+
+		self.Bind(wx.EVT_TOOL, self.OnSave, id=wx.ID_SAVE)
+
 		grid = SimpleGrid(panel, log)
 		self.grid = grid
-		btnSave = wx.Button(panel, -1, "Save")
-		btnSave.SetDefault()
-		self.Bind(wx.EVT_BUTTON, self.OnButtonSave, btnSave)
-		btnSave.Bind(wx.EVT_SET_FOCUS, self.OnButtonFocusSave)
 		bs = wx.BoxSizer(wx.VERTICAL)
-		bs.Add(btnSave)
+		bs.Add(toolbar)
 		bs.Add(grid, 1, wx.GROW|wx.ALL, 5)
 		panel.SetSizer(bs)
 
@@ -149,10 +152,14 @@ class AppFrame(wx.Frame):
 		menu_bar.Append(menu_edit, u"編集")
 
 		self.SetMenuBar(menu_bar)
-	def OnButtonSave(self, evt):
-		self.grid.save()
-	def OnButtonFocusSave(self, evt):
-		print "button focus"
+
+	def OnExit(self, evt):
+		self.Close()
+
+	def OnSave(self, evt):
+		#self.grid.save()
+		self.toolbar.ToggleTool(wx.ID_SAVE, False)
+		print "Save done."
 
 if __name__ == "__main__":
 	import sys
