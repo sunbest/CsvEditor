@@ -194,7 +194,7 @@ class SimpleGrid(gridlib.Grid):
 			(evt.GetRow(), evt.GetCol(), evt.GetControl()))
 
 	def SetStatusText(self, msg):
-		self.frame.statusbar.SetStatusText(msg)
+		self.frame.statusbar.SetStatusText("[%s] %s"%(self.filename, msg))
 
 
 class AppFrame(wx.Frame):
