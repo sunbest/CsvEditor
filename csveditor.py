@@ -160,8 +160,7 @@ class AppFrame(wx.Frame):
 		self.Close()
 
 	def OnSave(self, evt):
-		#self.grid.save()
-		self.toolbar.ToggleTool(wx.ID_SAVE, False)
+		self.grid.save()
 		print "Save done."
 
 if __name__ == "__main__":
@@ -173,6 +172,6 @@ if __name__ == "__main__":
 	frame.Show()
 
 	# テスト用コード
-	frame.grid.openFile("test.csv")
+	# frame.grid.openFile("test.csv")
 
 	application.MainLoop()
