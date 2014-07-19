@@ -16,6 +16,8 @@ class GridFileDropTarget(wx.FileDropTarget):
 		self.grid.openFile(filenames[0])
 
 class SimpleGrid(gridlib.Grid):
+	WIDTH = 25
+	HEIGHT = 25
 	def __init__(self, parent, frame):
 		gridlib.Grid.__init__(self, parent, -1)
 		self.parent = parent
@@ -27,16 +29,31 @@ class SimpleGrid(gridlib.Grid):
 		self.SetDropTarget(GridFileDropTarget(self))
 
 		# ひとまず25x25固定とする
-		self.CreateGrid(25, 25)
+		self.CreateGrid(self.HEIGHT, self.WIDTH)
 
 		# バインド
 		self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnCellLeftClick)
+
+		self.Bind(gridlib.EVT_GRID_CELL_CHANGE, self.OnCellChange)
+		self.Bind(gridlib.EVT_GRID_SELECT_CELL, self.OnSelectCell)
+
+		self.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.OnEditorShown)
+		self.Bind(gridlib.EVT_GRID_EDITOR_HIDDEN, self.OnEditorHidden)
+		self.Bind(gridlib.EVT_GRID_EDITOR_CREATED, self.OnEditorCreated)
 
 		self.filename = None
 
 		self.log = sys.stdout
 
+		self.cells = {}
+
 	def openFile(self, filename):
+		self.firsts = {}
+		for j in range(self.HEIGHT):
+			for i in range(self.WIDTH):
+				# セルの色を元に戻す
+				self.SetCellBackgroundColour(j, i, wx.WHITE)
+
 		j = 0
 		for line in codecs.open(filename, "r", "utf-8"):
 			i = 0
@@ -45,6 +62,8 @@ class SimpleGrid(gridlib.Grid):
 			data = line.split(",")
 			for v in data:
 				self.SetCellValue(j, i, v)
+				# 初期値を保存しておく
+				self.firsts[i+j*self.HEIGHT] = v
 				i += 1
 			j += 1
 		self.filename = filename
@@ -55,11 +74,15 @@ class SimpleGrid(gridlib.Grid):
 			self.SetStatusText("Error: Please open file.")
 			return
 
+		self.firsts = {}
 		out = ""
 		bEnd = False
-		for j in range(25):
-			for i in range(25):
+		for j in range(self.HEIGHT):
+			for i in range(self.WIDTH):
 				v = self.GetCellValue(j, i)
+				self.firsts[i + j*self.HEIGHT] = v
+				# セルの色を元に戻す
+				self.SetCellBackgroundColour(j, i, wx.WHITE)
 				if v == "":
 					if i == 0: bEnd = True
 					break
@@ -100,6 +123,10 @@ class SimpleGrid(gridlib.Grid):
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
 		evt.Skip()
 
+	def OnCellChange(self, evt):
+		self.log.write("OnCellChange: (%d,%d) %s\n" %
+			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+
 	def OnIdle(self, evt):
 		if self.moveTo != None:
 			self.SetGridCursor(self.moveTo[0], self.moveTo[1])
@@ -113,15 +140,54 @@ class SimpleGrid(gridlib.Grid):
 		else:
 			# 非選択状態
 			msg = 'Deselected'
+		self.checkDiff(evt)
 
 		print("OnSelectCell: (%d,%d) %s\n" %
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
 
 		if self.IsCellEditControlEnabled():
+			print("IsCellEditControlEnabled")
 			self.HideCellEditControl()
 			self.DisableCellEditControl()
 
 		evt.Skip()
+
+	def Cells(self, evt):
+		# 現在のセルの値を取得する
+		return self.GetCellValue(evt.GetRow(), evt.GetCol())
+
+	def Firsts(self, evt):
+		# 初期値を取得する
+		idx = evt.GetRow() * self.HEIGHT + evt.GetCol()
+		if idx in self.firsts:
+			return self.firsts[idx]
+		else:
+			return ""
+
+	def checkDiff(self, evt):
+		# 初期値と相違があれがセルの色を変える。そうでなければ白に戻す
+		color = wx.WHITE
+		if self.Cells(evt) != self.Firsts(evt):
+			color = wx.Colour(255, 211, 255)
+		self.SetCellBackgroundColour(evt.GetRow(), evt.GetCol(), color)
+	def OnEditorShown(self, evt):
+		# セルのエディット開始
+		self.checkDiff(evt)
+		self.log.write("OnEditorShown: (%d,%d) %s\n" %
+			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		evt.Skip()
+
+	def OnEditorHidden(self, evt):
+		# セルのエディット終了
+		self.checkDiff(evt)
+		self.log.write("OnEditorHidden: (%d,%d) %s\n" %
+			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		evt.Skip()
+
+	def OnEditorCreated(self, evt):
+		# セルのエディット（初回のみ）
+		self.log.write("OnEditorCreated: (%d,%d) %s\t" %
+			(evt.GetRow(), evt.GetCol(), evt.GetControl()))
 
 	def SetStatusText(self, msg):
 		self.frame.statusbar.SetStatusText(msg)
@@ -193,6 +259,6 @@ if __name__ == "__main__":
 	frame.Show()
 
 	# テスト用コード
-	# frame.grid.openFile("test.csv")
+	frame.grid.openFile("test.csv")
 
 	application.MainLoop()
