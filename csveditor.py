@@ -245,8 +245,8 @@ class AppFrame(wx.Frame):
 		toolbar = wx.ToolBar(panel)
 		self.toolbar = toolbar
 		# 保存アイコン追加
-		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./icons/save.gif"))
-		toolbar.AddLabelTool(wx.ID_OPEN, "Open", wx.Bitmap("./icons/open.gif"))
+		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./save.gif"))
+		toolbar.AddLabelTool(wx.ID_OPEN, "Open", wx.Bitmap("./open.gif"))
 		toolbar.Realize()
 
 		self.Bind(wx.EVT_TOOL, self.OnSave, id=wx.ID_SAVE)
