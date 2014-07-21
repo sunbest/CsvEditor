@@ -323,6 +323,9 @@ if __name__ == "__main__":
 	frame = AppFrame(None, sys.stdout)
 	frame.Show()
 
+	if len(sys.argv) > 1:
+		# 起動引数があればファイルを開く
+		frame.grid.openfile(sys.argv[1])
 	# テスト用コード
 	# frame.grid.openFile("test.csv")
 
