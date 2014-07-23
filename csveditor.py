@@ -15,6 +15,92 @@ class GridFileDropTarget(wx.FileDropTarget):
 		# ドロップされたファイルを開く
 		self.grid.openFile(filenames[0])
 
+class PopupMenu(wx.Menu):
+	def __init__(self, parent, rowCount, colCount):
+		wx.Menu.__init__(self)
+		self.parent = parent
+
+		insMenu = "Insert"
+		delMenu = "Delete"
+		if rowCount > 0:
+			insMenu += " %d rows"%(rowCount)
+			delMenu += " %d rows"%(rowCount)
+		if colCount > 0:
+			insMenu += " %d cols"%(colCount)
+			delMenu += " %d cols"%(colCount)
+
+		item = wx.MenuItem(self, wx.NewId(), insMenu)
+		self.AppendItem(item)
+		self.Bind(wx.EVT_MENU, self.Insert, id=item.GetId())
+		item = wx.MenuItem(self, wx.NewId(), delMenu)
+		self.AppendItem(item)
+		self.Bind(wx.EVT_MENU, self.Delete, id=item.GetId())
+
+	def Insert(self, evt):
+		self.parent.Insert(evt)
+
+	def Delete(self, evt):
+		self.parent.Delete(evt)
+
+class RangeSelect:
+	def __init__(self):
+		self.rowStart = -1
+		self.colStart = -1
+		self.rowCount = 1
+		self.colCount = 1
+		self.rowSelect = -1
+		self.colSelect = -1
+	def insert(self, grid):
+		if self.rowSelect >= 0:
+			if self.rowCount == 0:
+				grid.InsertRows(self.rowSelect, 1)
+			else:
+				grid.InsertRows(self.rowStart, self.rowCount)
+		if self.colSelect >= 0:
+			if self.colCount == 0:
+				grid.InsertCols(self.colSelect, 1)
+			else:
+				grid.InsertCols(self.colStart, self.colCount)
+	def delete(self, grid):
+		if self.rowSelect >= 0:
+			if self.rowCount == 0:
+				grid.DeleteRows(self.rowSelect, 1)
+			else:
+				grid.DeleteRows(self.rowStart, self.rowCount)
+		if self.colSelect >= 0:
+			if self.colCount == 0:
+				grid.DeleteCols(self.colSelect, 1)
+			else:
+				grid.DeleteCols(self.colStart, self.colCount)
+	def setRange(self, topRow, bottomRow, leftCol, rightCol):
+		if topRow == bottomRow:
+			if self.rowStart >= 0:
+				if self.rowStart > topRow:
+					self.rowCount = self.rowStart - topRow + 1
+					self.rowStart = topRow
+				else:
+					self.rowCount = bottomRow - self.rowStart + 1
+			else:
+				self.rowStart = topRow
+				self.rowCount = 0
+		else:
+			self.rowStart = -1
+			self.rowCount = 0
+
+		if leftCol == rightCol:
+			if self.colStart >= 0:
+				if self.colStart > leftCol:
+					self.colCount = self.colStart - leftCol + 1
+					self.colStart = leftCol
+				else:
+					self.colCount = rightCol - self.colStart + 1
+			else:
+				self.colStart = leftCol
+				self.colCount = 0
+		else:
+			self.colStart = -1
+			self.colCount = 0
+
 class SimpleGrid(gridlib.Grid):
 	WIDTH = 25
 	HEIGHT = 100
@@ -23,6 +109,8 @@ class SimpleGrid(gridlib.Grid):
 		self.parent = parent
 		self.frame = frame
 		self.moveTo = None
+		self.panel = wx.Panel(parent, -1)
+		self.rangeSelect = RangeSelect()
 
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
@@ -83,7 +171,7 @@ class SimpleGrid(gridlib.Grid):
 			j += 1
 		self.filename = filename
 		self.SetStatusText("Open file '%s'."%filename)
-		
+
 		# テキストに合わせて自動リサイズする
 		self.AutoSize()
 
@@ -136,6 +224,13 @@ class SimpleGrid(gridlib.Grid):
 		self.SetStatusText("Save as '%s'."%self.filename)
 		print("Save as '%s'."%self.filename)
 
+	def Insert(self, evt):
+		print("Insert.")
+		self.rangeSelect.insert(self)
+
+	def Delete(self, evt):
+		print("Delete.")
+		self.rangeSelect.delete(self)
 
 	def OnCellLeftClick(self, evt):
 		self.log.write("OnCellLeftClick: (%d,%d) %s\n" %
@@ -148,13 +243,17 @@ class SimpleGrid(gridlib.Grid):
 		evt.Skip()
 
 	def OnLabelLeftClick(self, evt):
-		self.log.write("OnLabelLeftClick: (%d,%d) %s\n" %
-			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		# ラベル左クリック
 		evt.Skip()
 
 	def OnLabelRightClick(self, evt):
-		self.log.write("OnLabelRightClick: (%d,%d) %s\n" %
-			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		# ラベル右クリック
+		self.rangeSelect.rowSelect = evt.GetRow()
+		self.rangeSelect.colSelect = evt.GetCol()
+
+		# ボップアップメニュー表示
+		self.PopupMenu(PopupMenu(self, self.rangeSelect.rowCount, self.rangeSelect.colCount), evt.GetPosition())
+
 		evt.Skip()
 
 	def OnCellLeftDClick(self, evt):
@@ -200,13 +299,15 @@ class SimpleGrid(gridlib.Grid):
 		self.SetStatusText(msg)
 
 		evt.Skip()
-		
+
 	def OnRangeSelect(self, evt):
-		"""Internal update to the selection tracking list"""
+		# 範囲選択
 		print("OnRangeSelect: Row %d:%d Col %d:%d\n" %
 			(evt.GetTopRow(), evt.GetBottomRow(), evt.GetLeftCol(), evt.GetRightCol()))
+		self.rangeSelect.setRange(evt.GetTopRow(), evt.GetBottomRow(), evt.GetLeftCol(), evt.GetRightCol())
+
 		evt.Skip()
-		
+
 	def Cells(self, evt):
 		# 現在のセルの値を取得する
 		return self.GetCellValue(evt.GetRow(), evt.GetCol())
