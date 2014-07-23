@@ -28,16 +28,20 @@ class SimpleGrid(gridlib.Grid):
 
 		self.SetDropTarget(GridFileDropTarget(self))
 
-		# ひとまず25x25固定とする
+		# ひとまず WIDTHxHEIGHT 固定とする
 		self.CreateGrid(self.HEIGHT, self.WIDTH)
 
 		# バインド
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
 		self.Bind(gridlib.EVT_GRID_CELL_LEFT_CLICK, self.OnCellLeftClick)
+		self.Bind(gridlib.EVT_GRID_CELL_RIGHT_CLICK, self.OnCellRightClick)
+		self.Bind(gridlib.EVT_GRID_LABEL_LEFT_CLICK, self.OnLabelLeftClick)
+		self.Bind(gridlib.EVT_GRID_LABEL_RIGHT_CLICK, self.OnLabelRightClick)
 
 		self.Bind(gridlib.EVT_GRID_CELL_CHANGE, self.OnCellChange)
 		self.Bind(gridlib.EVT_GRID_SELECT_CELL, self.OnSelectCell)
+		self.Bind(gridlib.EVT_GRID_RANGE_SELECT, self.OnRangeSelect)
 
 		self.Bind(gridlib.EVT_GRID_EDITOR_SHOWN, self.OnEditorShown)
 		self.Bind(gridlib.EVT_GRID_EDITOR_HIDDEN, self.OnEditorHidden)
@@ -79,6 +83,9 @@ class SimpleGrid(gridlib.Grid):
 			j += 1
 		self.filename = filename
 		self.SetStatusText("Open file '%s'."%filename)
+		
+		# テキストに合わせて自動リサイズする
+		self.AutoSize()
 
 	def save(self):
 		if self.filename == None:
@@ -140,6 +147,16 @@ class SimpleGrid(gridlib.Grid):
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
 		evt.Skip()
 
+	def OnLabelLeftClick(self, evt):
+		self.log.write("OnLabelLeftClick: (%d,%d) %s\n" %
+			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		evt.Skip()
+
+	def OnLabelRightClick(self, evt):
+		self.log.write("OnLabelRightClick: (%d,%d) %s\n" %
+			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		evt.Skip()
+
 	def OnCellLeftDClick(self, evt):
 		self.log.write("OnCellLeftDClick: (%d,%d) %s\n" %
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
@@ -183,7 +200,13 @@ class SimpleGrid(gridlib.Grid):
 		self.SetStatusText(msg)
 
 		evt.Skip()
-
+		
+	def OnRangeSelect(self, evt):
+		"""Internal update to the selection tracking list"""
+		print("OnRangeSelect: Row %d:%d Col %d:%d\n" %
+			(evt.GetTopRow(), evt.GetBottomRow(), evt.GetLeftCol(), evt.GetRightCol()))
+		evt.Skip()
+		
 	def Cells(self, evt):
 		# 現在のセルの値を取得する
 		return self.GetCellValue(evt.GetRow(), evt.GetCol())
@@ -325,7 +348,7 @@ if __name__ == "__main__":
 
 	if len(sys.argv) > 1:
 		# 起動引数があればファイルを開く
-		frame.grid.openfile(sys.argv[1])
+		frame.grid.openFile(sys.argv[1])
 	# テスト用コード
 	# frame.grid.openFile("test.csv")
 
