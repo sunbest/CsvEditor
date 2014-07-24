@@ -117,13 +117,18 @@ class HistoryMgr:
 	def undo(self):
 		if self.length() <= 0:
 			return
-		
+
 		# 履歴から取り出し
 		row, col, val = self.pop()
 		# 値を戻す
 		self.grid.SetCellValue(row, col, val)
 		# 変更したセルにカーソルを移動する
 		self.grid.SetGridCursor(row, col)
+
+	def clear(self):
+		""" 履歴をすべて消す """
+		while self.length() > 0:
+			self.pop()
 
 class SimpleGrid(gridlib.Grid):
 	WIDTH = 25
@@ -134,10 +139,10 @@ class SimpleGrid(gridlib.Grid):
 		self.frame = frame
 		self.moveTo = None
 		self.panel = wx.Panel(parent, -1)
-		
+
 		# 範囲選択管理
 		self.rangeSelect = RangeSelect()
-		
+
 		# 履歴管理
 		self.histories = HistoryMgr(self)
 
@@ -254,12 +259,30 @@ class SimpleGrid(gridlib.Grid):
 		print("Save as '%s'."%self.filename)
 
 	def Insert(self, evt):
-		print("Insert.")
 		self.rangeSelect.insert(self)
+		# 履歴を消す
+		self.histories.clear()
 
 	def Delete(self, evt):
-		print("Delete.")
 		self.rangeSelect.delete(self)
+		# 履歴を消す
+		self.histories.clear()
+
+	def Copy(self):
+		if wx.TheClipboard.Open():
+			val = self.Cells()
+			wx.TheClipboard.SetData(wx.TextDataObject(val))
+			wx.TheClipboard.Flush()
+			wx.TheClipboard.Close()
+
+	def Paste(self):
+		if wx.TheClipboard.Open():
+			do = wx.TextDataObject()
+			wx.TheClipboard.GetData(do)
+			val = do.GetText()
+			wx.TheClipboard.Close()
+			if val != "":
+				self.SetCell(val)
 
 	def OnCellLeftClick(self, evt):
 		self.log.write("OnCellLeftClick: (%d,%d) %s\n" %
@@ -296,7 +319,7 @@ class SimpleGrid(gridlib.Grid):
 		evt.Skip()
 
 	def OnCellChange(self, evt):
-		
+
 		# 変更点チェック
 		self.checkDiff(evt)
 
@@ -337,9 +360,33 @@ class SimpleGrid(gridlib.Grid):
 
 		evt.Skip()
 
-	def Cells(self, evt):
+	def Cells(self, evt=None):
 		# 現在のセルの値を取得する
-		return self.GetCellValue(evt.GetRow(), evt.GetCol())
+		if evt == None:
+			row = self.GetGridCursorRow()
+			col = self.GetGridCursorCol()
+			return self.GetCellValue(row, col)
+		else:
+			return self.GetCellValue(evt.GetRow(), evt.GetCol())
+
+	def GetCell(self, row, col):
+		# 指定のセルの値を取得する
+		return self.GetCellValue(row, col)
+
+	def SetCell(self, val, row=-1, col=-1):
+		# セルに値を設定する
+		if row < 0:
+			row = self.GetGridCursorRow()
+		if col < 0:
+			col = self.GetGridCursorCol()
+
+		if val == self.GetCell(row, col):
+			# 変更不要
+			return
+
+		# 履歴に追加
+		self.histories.push(row, col, self.GetCell(row, col))
+		return self.SetCellValue(row, col, val)
 
 	def Firsts(self, evt):
 		# 初期値を取得する
@@ -488,10 +535,10 @@ class AppFrame(wx.Frame):
 		print("cut")
 
 	def OnCopy(self, evt):
-		print("copy")
+		self.grid.Copy()
 
 	def OnPaste(self, evt):
-		print("paste")
+		self.grid.Paste()
 
 if __name__ == "__main__":
 	import sys
@@ -505,6 +552,6 @@ if __name__ == "__main__":
 		# 起動引数があればファイルを開く
 		frame.grid.openFile(sys.argv[1])
 	# テスト用コード
-	# frame.grid.openFile("test.csv")
+	frame.grid.openFile("test.csv")
 
 	application.MainLoop()
