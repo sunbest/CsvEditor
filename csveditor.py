@@ -101,6 +101,26 @@ class RangeSelect:
 			self.colStart = -1
 			self.colCount = 0
 
+class HistoryMgr:
+	""" 履歴管理 """
+	def __init__(self, parent):
+		self.buffers = []
+		self.grid = parent
+	def push(self, row, col, val):
+		item = "%d,%d,%s"%(row, col, val)
+		self.buffers.append(item)
+	def pop(self):
+		items = self.buffers.pop().split(",")
+		return (int(items[0]), int(items[1]), items[2])
+	def length(self):
+		return len(self.buffers)
+	def undo(self):
+		if self.length() <= 0:
+			return
+		
+		row, col, val = self.pop()
+		self.grid.SetCellValue(row, col, val)
+
 class SimpleGrid(gridlib.Grid):
 	WIDTH = 25
 	HEIGHT = 100
@@ -110,7 +130,12 @@ class SimpleGrid(gridlib.Grid):
 		self.frame = frame
 		self.moveTo = None
 		self.panel = wx.Panel(parent, -1)
+		
+		# 範囲選択管理
 		self.rangeSelect = RangeSelect()
+		
+		# 履歴管理
+		self.histories = HistoryMgr(self)
 
 		self.Bind(wx.EVT_IDLE, self.OnIdle)
 
@@ -267,8 +292,8 @@ class SimpleGrid(gridlib.Grid):
 		evt.Skip()
 
 	def OnCellChange(self, evt):
-		self.log.write("OnCellChange: (%d,%d) %s\n" %
-			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
+		
+		# 変更点チェック
 		self.checkDiff(evt)
 
 	def OnIdle(self, evt):
@@ -321,7 +346,7 @@ class SimpleGrid(gridlib.Grid):
 			return ""
 
 	def checkDiff(self, evt):
-		# 初期値と相違があれがセルの色を変える。そうでなければ白に戻す
+		# 初期値と相違があればセルの色を変える。そうでなければ白に戻す
 		color = wx.WHITE
 		if self.Cells(evt) != self.Firsts(evt):
 			color = wx.Colour(255, 211, 255)
@@ -337,6 +362,8 @@ class SimpleGrid(gridlib.Grid):
 
 	def OnEditorHidden(self, evt):
 		# セルのエディット終了
+		# 履歴に追加
+		self.histories.push(evt.GetRow(), evt.GetCol(), self.Cells(evt))
 		self.checkDiff(evt)
 		self.log.write("OnEditorHidden: (%d,%d) %s\n" %
 			(evt.GetRow(), evt.GetCol(), evt.GetPosition()))
@@ -395,10 +422,10 @@ class AppFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.OnExit, menu_exit)
 
 		menu_edit  = wx.Menu()
-		menu_undo  = wx.MenuItem(menu_edit, 3, "Undo\tCtrl+Z")
-		menu_cut   = wx.MenuItem(menu_edit, 4, "Cut\tCtrl+X")
-		menu_copy  = wx.MenuItem(menu_edit, 5, "Copy\tCtrl+C")
-		menu_paste = wx.MenuItem(menu_edit, 6, "Paste\tCtrl+V")
+		menu_undo  = wx.MenuItem(menu_edit, 3, "&Undo\tCtrl+Z")
+		menu_cut   = wx.MenuItem(menu_edit, 4, "&Cut\tCtrl+X")
+		menu_copy  = wx.MenuItem(menu_edit, 5, "&Copy\tCtrl+C")
+		menu_paste = wx.MenuItem(menu_edit, 6, "&Paste\tCtrl+V")
 		menu_edit.AppendItem(menu_undo)
 		menu_edit.AppendItem(menu_cut)
 		menu_edit.AppendItem(menu_copy)
@@ -451,7 +478,7 @@ class AppFrame(wx.Frame):
 		self.grid.save()
 
 	def OnUndo(self, evt):
-		print("undo")
+		self.grid.histories.undo()
 
 	def OnCut(self, evt):
 		print("cut")
