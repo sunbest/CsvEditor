@@ -394,9 +394,20 @@ class AppFrame(wx.Frame):
 		self.Bind(wx.EVT_MENU, self.OnSave, menu_save)
 		self.Bind(wx.EVT_MENU, self.OnExit, menu_exit)
 
-		menu_edit = wx.Menu()
-		menu_edit.Append(3, u"Copy")
-		menu_edit.Append(4, u"Paste")
+		menu_edit  = wx.Menu()
+		menu_undo  = wx.MenuItem(menu_edit, 3, "Undo\tCtrl+Z")
+		menu_cut   = wx.MenuItem(menu_edit, 4, "Cut\tCtrl+X")
+		menu_copy  = wx.MenuItem(menu_edit, 5, "Copy\tCtrl+C")
+		menu_paste = wx.MenuItem(menu_edit, 6, "Paste\tCtrl+V")
+		menu_edit.AppendItem(menu_undo)
+		menu_edit.AppendItem(menu_cut)
+		menu_edit.AppendItem(menu_copy)
+		menu_edit.AppendItem(menu_paste)
+
+		self.Bind(wx.EVT_MENU, self.OnUndo, menu_undo)
+		self.Bind(wx.EVT_MENU, self.OnCut, menu_cut)
+		self.Bind(wx.EVT_MENU, self.OnCopy, menu_copy)
+		self.Bind(wx.EVT_MENU, self.OnPaste, menu_paste)
 
 		menu_bar = wx.MenuBar()
 		menu_bar.Append(menu_file, u"File")
@@ -438,6 +449,18 @@ class AppFrame(wx.Frame):
 
 	def OnSave(self, evt):
 		self.grid.save()
+
+	def OnUndo(self, evt):
+		print("undo")
+
+	def OnCut(self, evt):
+		print("cut")
+
+	def OnCopy(self, evt):
+		print("copy")
+
+	def OnPaste(self, evt):
+		print("paste")
 
 if __name__ == "__main__":
 	import sys
