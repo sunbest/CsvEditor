@@ -268,6 +268,14 @@ class SimpleGrid(gridlib.Grid):
 		# 履歴を消す
 		self.histories.clear()
 
+	def Cut(self):
+		if wx.TheClipboard.Open():
+			val = self.Cells()
+			wx.TheClipboard.SetData(wx.TextDataObject(val))
+			wx.TheClipboard.Flush()
+			wx.TheClipboard.Close()
+			self.SetCell("")
+
 	def Copy(self):
 		if wx.TheClipboard.Open():
 			val = self.Cells()
@@ -532,7 +540,7 @@ class AppFrame(wx.Frame):
 		self.grid.histories.undo()
 
 	def OnCut(self, evt):
-		print("cut")
+		self.grid.Cut()
 
 	def OnCopy(self, evt):
 		self.grid.Copy()
