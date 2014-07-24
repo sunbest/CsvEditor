@@ -118,8 +118,12 @@ class HistoryMgr:
 		if self.length() <= 0:
 			return
 		
+		# 履歴から取り出し
 		row, col, val = self.pop()
+		# 値を戻す
 		self.grid.SetCellValue(row, col, val)
+		# 変更したセルにカーソルを移動する
+		self.grid.SetGridCursor(row, col)
 
 class SimpleGrid(gridlib.Grid):
 	WIDTH = 25
