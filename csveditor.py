@@ -209,21 +209,21 @@ class SimpleGrid(gridlib.Grid):
 		# テキストに合わせて自動リサイズする
 		self.AutoSize()
 
-	def save(self):
-		if self.filename == None:
-			dirName = ''
-			# ファイル選択ダイアログの表示
-			dialog = wx.FileDialog(self, "Choose a save file", dirName, "", "*.csv", wx.OPEN)
+	def saveas(self):
+		""" 名前をつけて保存 """
+		dirName = ''
+		dialog = wx.FileDialog(self, "Input a save file", dirName, "", "*.csv", wx.FD_SAVE)
+		result = dialog.ShowModal()
+		dialog.Destroy()
+		if result == wx.ID_OK:
+			fileName = dialog.GetFilename()
+			dirName = dialog.GetDirectory()
+			self.filename = dirName + "/" + fileName
 
-			# OKボタンが押されるまで表示
-			result = dialog.ShowModal()
-			dialog.Destroy()
-			if result == wx.ID_OK:
-				# ファイルを開いて保存する
-				fileName = dialog.GetFilename()
-				dirName = dialog.GetDirectory()
-				self.filename = dirName + "/" + fileName
-			else:
+	def save(self, bSaveAs=False):
+		if self.filename == None or bSaveAs:
+			self.saveas()
+			if self.filename == None:
 				self.SetStatusText("Error: Please open file.")
 				return
 
@@ -454,13 +454,14 @@ class AppFrame(wx.Frame):
 		# ツールバー生成
 		toolbar = wx.ToolBar(panel)
 		self.toolbar = toolbar
-		# 保存アイコン追加
-		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./save.gif"))
-		toolbar.AddLabelTool(wx.ID_OPEN, "Open", wx.Bitmap("./open.gif"))
+		toolbar.AddLabelTool(wx.ID_SAVE, "Save", wx.Bitmap("./save.gif")) # 保存アイコン追加
+		toolbar.AddLabelTool(wx.ID_OPEN, "Open", wx.Bitmap("./open.gif")) # 開くアイコン
+		toolbar.AddLabelTool(wx.ID_UNDO, "Undo", wx.Bitmap("./undo.gif")) # Undoアイコン
 		toolbar.Realize()
 
 		self.Bind(wx.EVT_TOOL, self.OnSave, id=wx.ID_SAVE)
 		self.Bind(wx.EVT_TOOL, self.OnOpen, id=wx.ID_OPEN)
+		self.Bind(wx.EVT_TOOL, self.OnUndo, id=wx.ID_UNDO)
 
 		# グリッド生成
 		grid = SimpleGrid(panel, self)
@@ -470,21 +471,24 @@ class AppFrame(wx.Frame):
 		menu_file = wx.Menu()
 		menu_open = wx.MenuItem(menu_file, 1, u"&Open\tCtrl+O")
 		menu_save = wx.MenuItem(menu_file, 2, u"&Save\tCtrl+S")
+		menu_saveas = wx.MenuItem(menu_file, 3, u"&Save As...\tShift+Ctrl+S")
 		menu_file.AppendItem(menu_open)
 		menu_file.AppendItem(menu_save)
+		menu_file.AppendItem(menu_saveas)
 		menu_file.AppendSeparator()
-		menu_exit = wx.MenuItem(menu_file, 3, "&Quit", "Quit CsvEditor")
+		menu_exit = wx.MenuItem(menu_file, 4, "&Quit", "Quit CsvEditor")
 		menu_file.AppendItem(menu_exit)
 
 		self.Bind(wx.EVT_MENU, self.OnOpen, menu_open)
 		self.Bind(wx.EVT_MENU, self.OnSave, menu_save)
+		self.Bind(wx.EVT_MENU, self.OnSaveAs, menu_saveas)
 		self.Bind(wx.EVT_MENU, self.OnExit, menu_exit)
 
 		menu_edit  = wx.Menu()
-		menu_undo  = wx.MenuItem(menu_edit, 3, "&Undo\tCtrl+Z")
-		menu_cut   = wx.MenuItem(menu_edit, 4, "&Cut\tCtrl+X")
-		menu_copy  = wx.MenuItem(menu_edit, 5, "&Copy\tCtrl+C")
-		menu_paste = wx.MenuItem(menu_edit, 6, "&Paste\tCtrl+V")
+		menu_undo  = wx.MenuItem(menu_edit, 5, "&Undo\tCtrl+Z")
+		menu_cut   = wx.MenuItem(menu_edit, 6, "&Cut\tCtrl+X")
+		menu_copy  = wx.MenuItem(menu_edit, 7, "&Copy\tCtrl+C")
+		menu_paste = wx.MenuItem(menu_edit, 8, "&Paste\tCtrl+V")
 		menu_edit.AppendItem(menu_undo)
 		menu_edit.AppendItem(menu_cut)
 		menu_edit.AppendItem(menu_copy)
@@ -535,6 +539,9 @@ class AppFrame(wx.Frame):
 
 	def OnSave(self, evt):
 		self.grid.save()
+
+	def OnSaveAs(self, evt):
+		self.grid.save(True)
 
 	def OnUndo(self, evt):
 		self.grid.histories.undo()
