@@ -8,7 +8,7 @@ Usage:
 from setuptools import setup
 
 APP = ['csveditor.py']
-DATA_FILES = ['open.gif', 'save.gif']
+DATA_FILES = ['open.gif', 'save.gif', 'undo.gif']
 OPTIONS = {'argv_emulation': True}
 
 setup(
