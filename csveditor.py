@@ -232,6 +232,7 @@ class SimpleGrid(gridlib.Grid):
 		self.firsts = {}
 		out = ""
 		bEnd = False
+		nColMax = 0
 		for j in range(self.HEIGHT):
 			for i in range(self.WIDTH):
 				v = self.GetCellValue(j, i)
@@ -239,8 +240,19 @@ class SimpleGrid(gridlib.Grid):
 				# セルの色を元に戻す
 				self.SetCellBackgroundColour(j, i, wx.WHITE)
 				if v == "":
-					if i == 0: bEnd = True
+					if i == 0:
+						# 1列目に何もなければ終了
+						bEnd = True
+					elif i > nColMax:
+						# 最大列を保存
+						nColMax = i
+					else:
+						# 足りない列だけカンマを付加
+						col = nColMax - i
+						out += "," * col
+					# この行の処理はおしまい
 					break
+
 				if i != 0:
 					out += ","+v
 				else:
